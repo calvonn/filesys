@@ -11,6 +11,7 @@ const Dashboard = () => {
                 <ul>
                     <li><Link to="/upload">File Upload</Link></li>
                     {/* 其他导航链接 */}
+                    <li><Link to="/list">File List</Link></li>
                 </ul>
             </nav>
         </div>
