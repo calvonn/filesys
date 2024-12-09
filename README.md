@@ -4,10 +4,8 @@
 
 ## psql
 
-```
 sudo -i -u postgres
 psql
-```
 
 ```
 CREATE DATABASE filemanagement;
