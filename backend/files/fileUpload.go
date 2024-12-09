@@ -3,6 +3,7 @@ package files
 import (
 	"crypto/md5"
 	"encoding/hex"
+	"filesys/database"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"io"
@@ -85,28 +86,37 @@ func UploadFile(c *gin.Context) {
 	}
 
 	// 检查文件是否已经存在
-	existingFile := findFileByMD5(md5Value)
-	if existingFile != nil {
+	var existingFile File
+	err = database.DB_Conn.QueryRow(`SELECT id, name, path, md5 FROM files WHERE md5 = $1`, md5Value).Scan(&existingFile.ID, &existingFile.Name, &existingFile.Path, &existingFile.MD5)
+	if err == nil {
 		os.Remove(tmpsavePath) // 删除刚刚上传的重复文件
 		c.JSON(http.StatusConflict, gin.H{"message": "File already exists", "file": existingFile})
 		return
 	}
 
 	// 检查是否有同名但不同MD5的文件
-	sameNameFile := findFileByName(file.Filename)
-	if sameNameFile != nil {
+	var sameNameFile File
+	err = db.QueryRow(`SELECT id, name, path, md5 FROM files WHERE name = $1`, file.Filename).Scan(&sameNameFile.ID, &sameNameFile.Name, &sameNameFile.Path, &sameNameFile.MD5)
+	if err == nil && sameNameFile.MD5 != md5Value {
 		newPath := generateUniqueFilePath(file.Filename)
-		os.Rename(savePath, newPath)
+		os.Rename(tmpsavePath, newPath)
 		savePath = newPath
+	} else {
+		if err := c.SaveUploadedFile(file, savePath); err != nil {
+			c.String(http.StatusBadRequest, "Upload failed: %v", err)
+			return
+		}
 	}
 
-	// 保存文件信息
-	if err := c.SaveUploadedFile(file, savePath); err != nil {
-		c.String(http.StatusBadRequest, "Upload failed: %v", err)
+	// 插入文件信息到数据库
+	var fileID int
+	err = db.QueryRow(`INSERT INTO files (name, path, md5) VALUES ($1, $2, $3) RETURNING id`, file.Filename, savePath, md5Value).Scan(&fileID)
+	if err != nil {
+		c.String(http.StatusInternalServerError, "Failed to save file info: %v", err)
 		return
 	}
-	newFile := File{ID: generateID(), Name: file.Filename, Path: savePath, MD5: md5Value}
-	saveFileToDB(newFile)
+
+	newFile := File{ID: fileID, Name: file.Filename, Path: savePath, MD5: md5Value}
 	os.Remove(tmpsavePath) // 删除临时文件
 
 	c.JSON(http.StatusOK, gin.H{"message": "Upload successful", "file": newFile})

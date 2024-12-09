@@ -1,6 +1,7 @@
 package main
 
 import (
+	"filesys/database"
 	"filesys/files"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -8,6 +9,7 @@ import (
 )
 
 func main() {
+	database.InitDB()
 	// 加载 savefile 目录中的文件
 	err := files.LoadFilesFromDir("./savefile")
 	if err != nil {
