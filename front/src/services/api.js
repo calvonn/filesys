@@ -1,11 +1,11 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://192.168.3.10:8222'; // 后端服务的基础URL
+const API_BASE_URL = 'http://127.0.0.1:8222'; // 后端服务的基础URL
 
 // 上传文件方法
 export const uploadFile = (file) => {
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append('file ', file);
     return axios.post(`${API_BASE_URL}/upload`, formData);
 };
 
